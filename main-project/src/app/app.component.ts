@@ -6,7 +6,7 @@ import { Component } from '@angular/core';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  loadedFeature = 'shopping-list'
+  loadedFeature = 'recipe'
 
   onNavigate(location: string) {
     this.loadedFeature = location
