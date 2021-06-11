@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import {Component, EventEmitter, OnInit, Output} from '@angular/core';
 import { Recipe } from "../recipe.model";
 
 @Component({
@@ -8,12 +8,14 @@ import { Recipe } from "../recipe.model";
 })
 export class RecipeListComponent implements OnInit {
 
+  @Output() recipeWasSelected = new EventEmitter<Recipe>()
+
   recipes: Recipe[] = [{
     name: 'A Test Recipe',
     description: "This is simply a test",
     imagePath: 'https://www.glutenfreeandmore.com/wp-content/uploads/2018/07/10brisket.jpg'
   },{
-    name: 'A Test Recipe',
+    name: 'B Test Recipe',
     description: "This is simply a test",
     imagePath: 'https://www.glutenfreeandmore.com/wp-content/uploads/2018/07/10brisket.jpg'
   }]
@@ -23,8 +25,7 @@ export class RecipeListComponent implements OnInit {
   ngOnInit(): void {
   }
 
-  addRecipe(recipe: Recipe) {
-
+  onRecipeSelected(element: Recipe) {
+    this.recipeWasSelected.emit(element)
   }
-
 }
