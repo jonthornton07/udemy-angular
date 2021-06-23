@@ -1,62 +1,56 @@
-import { Component, OnInit } from '@angular/core';
+import {Component, OnDestroy, OnInit} from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map } from 'rxjs/operators';
 import {Post} from './post.model';
+import {PostService} from './post.service';
+import {Subscription} from 'rxjs';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   loadedPosts = [];
   isFetching = false;
+  error = null;
+  private errorSub: Subscription;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient,
+              private postService: PostService) {}
 
   ngOnInit() {
-    this.fetchPosts();
+    this.errorSub = this.postService.error.subscribe(errorMessage => {
+      this.error = errorMessage
+    })
+    this.onFetchPosts()
+  }
+
+  ngOnDestroy() {
+    this.errorSub.unsubscribe();
   }
 
   onCreatePost(postData: Post) {
-    // Send Http request
-    this.http.post<{ name: string }>(
-      'https://ng-complete-guide-d92be-default-rtdb.firebaseio.com/posts.json',
-      postData
-    ).subscribe(responseData => {
-      console.log(responseData);
-    });
+    this.postService.createAndStorePost(postData.title, postData.content)
   }
 
   onFetchPosts() {
-    this.fetchPosts();
+    this.isFetching = true
+    this.postService.fetchPosts().subscribe(posts => {
+      this.isFetching = false
+      this.loadedPosts = posts
+    }, error => {
+      this.isFetching = false
+      this.error = error
+    });
   }
 
   onClearPosts() {
-    this.http
-      .delete('https://ng-complete-guide-d92be-default-rtdb.firebaseio.com/posts.json')
-      .subscribe(responseData => {
-        console.log(responseData)
-      })
+    this.postService.deletePosts().subscribe(() => {
+      this.loadedPosts = []
+    })
   }
 
-  private fetchPosts() {
-    this.isFetching = true;
-    this.http
-      .get<Post>('https://ng-complete-guide-d92be-default-rtdb.firebaseio.com/posts.json')
-      .pipe(map(responseData => {
-        const postArray: Post[] = [];
-
-        for (const key in responseData) {
-          if (responseData.hasOwnProperty(key)) {
-            postArray.push({...responseData[key], id: key})
-          }
-        }
-        return postArray
-      }))
-      .subscribe(posts => {
-        this.loadedPosts = posts
-        this.isFetching = false
-      })
+  handleError() {
+    this.error = null
   }
 }
