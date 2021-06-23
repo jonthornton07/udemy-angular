@@ -7,31 +7,16 @@ import {Subject} from "rxjs";
 @Injectable()
 export class RecipeService {
 
-  private recipes: Recipe[] = [{
-    name: 'A Test Recipe',
-    description: "This is simply a test",
-    imagePath: 'https://www.glutenfreeandmore.com/wp-content/uploads/2018/07/10brisket.jpg',
-    ingredients: [{
-      name: 'Apples',
-      amount: '10'
-    },{
-      name: 'Oranges',
-      amount: '15'
-    }]
-  },{
-    name: 'B Test Recipe',
-    description: "This is simply a test",
-    imagePath: 'https://www.glutenfreeandmore.com/wp-content/uploads/2018/07/10brisket.jpg',
-    ingredients: [{
-      name: 'Veggies',
-      amount: '2'
-    },{
-      name: 'Fruits',
-      amount: '1'
-    }]
-  }]
+  recipesChanged = new Subject<Recipe[]>()
+
+  private recipes: Recipe[] = []
 
   constructor(private shoppingListService: ShoppingListService) { }
+
+  setRecipes(recipes: Recipe[]) {
+    this.recipes = recipes
+    this.recipesChanged.next(this.recipes.slice())
+  }
 
   getRecipes() {
     return this.recipes.slice()
