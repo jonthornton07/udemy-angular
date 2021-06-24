@@ -1,5 +1,5 @@
-import {Component, ViewChild} from '@angular/core';
-import {NgForm} from "@angular/forms";
+import {Component, OnInit} from '@angular/core';
+import {FormArray, FormControl, FormGroup, Validators} from "@angular/forms";
 
 @Component({
   selector: 'app-root',
@@ -7,48 +7,31 @@ import {NgForm} from "@angular/forms";
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  // @ts-ignore
-  @ViewChild('f') signupForm: NgForm;
-  defaultQuestion = 'teacher'
-  answer = ''
   genders = ['male', 'female']
-  user = {
-    username: '',
-    email: '',
-    question: '',
-    answer: '',
-    gender: ''
-  }
-  submitted = false
+  signupForm: FormGroup
 
-  suggestUserName() {
-    const suggestedName = 'Superuser';
-    // this.signupForm.setValue({
-    //   userData: {
-    //     username: suggestedName,
-    //     email: ''
-    //   },
-    //   secret: 'pet',
-    //   questionAnswer: '',
-    //   gender: 'male'
-    // })
-    this.signupForm.form.patchValue({
-      userData: {
-        username: suggestedName
-      }
+  constructor() {
+    this.signupForm = new FormGroup({
+      'userData': new FormGroup({
+        'username': new FormControl(null, Validators.required),
+        'email': new FormControl(null, [Validators.required, Validators.email]),
+      }),
+      'gender': new FormControl('male'),
+      'hobbies': new FormArray([])
     })
+
   }
 
   onSubmit() {
-    this.submitted = true
-    this.user.username = this.signupForm.value.userData.username
-    this.user.email = this.signupForm.value.userData.email
-    this.user.question = this.signupForm.value.sercret
-    this.user.answer = this.signupForm.value.questionAnswer
-    this.user.username = this.signupForm.value.gender
+    console.log(this.signupForm)
   }
 
-  // onSubmit(f: NgForm) {
-  //   console.log(f)
-  // }
+  getControls() {
+    return (<FormArray>this.signupForm.get('hobbies')).controls;
+  }
+
+  onAddHobby() {
+    const control = new FormControl(null, Validators.required);
+    (<FormArray>this.signupForm.get('hobbies')).push(control)
+  }
 }
