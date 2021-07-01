@@ -59,7 +59,7 @@ export class AuthService {
     if (!userData) {
       return
     }
-    const loadedUser = new User(userData.email, userData.email, userData.id, new Date(userData._tokenExpirationDate))
+    const loadedUser = new User(userData.email, userData.id, userData._token, new Date(userData._tokenExpirationDate))
     if (loadedUser.token) {
       this.user.next(loadedUser)
       const duration = new Date(userData._tokenExpirationDate).getTime() - new Date().getTime()
