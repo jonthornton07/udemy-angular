@@ -1,7 +1,7 @@
 import {Component, ComponentFactoryResolver, OnDestroy, OnInit, ViewChild} from "@angular/core";
 import {NgForm} from "@angular/forms";
-import {AuthResponseData, AuthService} from "./auth.service";
-import {Observable, Subscription} from "rxjs";
+import {AuthService} from "./auth.service";
+import {Subscription} from "rxjs";
 import {Router} from "@angular/router";
 import {AlertComponent} from "../shared/alert/alert.component";
 import {PlaceholderDirective} from "../shared/placeholder/placeholder.directive";
@@ -19,6 +19,7 @@ export class AuthComponent implements OnInit, OnDestroy {
   error: string = null
   @ViewChild(PlaceholderDirective, { static: false }) alertLocation: PlaceholderDirective
   private closeSub: Subscription
+  private storeSub: Subscription
 
   constructor(private authService: AuthService,
               private router: Router,
@@ -26,15 +27,21 @@ export class AuthComponent implements OnInit, OnDestroy {
               private store: Store<AppState>) { }
 
   ngOnInit() {
-    this.store.select('auth').subscribe(authState => {
+    this.storeSub = this.store.select('auth').subscribe(authState => {
       this.isLoading = authState.loading
       this.error = authState.error
+      if (this.error !== null) {
+        this.showErrorAlert(this.error)
+      }
     })
   }
 
   ngOnDestroy() {
     if (this.closeSub) {
       this.closeSub.unsubscribe()
+    }
+    if (this.storeSub) {
+      this.storeSub.unsubscribe()
     }
   }
 
@@ -47,29 +54,12 @@ export class AuthComponent implements OnInit, OnDestroy {
     const email = form.value.email;
     const password = form.value.password;
 
-    let authObserv: Observable<AuthResponseData>;
-
-    this.isLoading = true
-    this.error = null
     if (this.isLoginMode) {
       this.store.dispatch(new AuthActions.LoginStart(email, password))
     } else {
-      authObserv = this.authService.signUp(email, password)
+      this.store.dispatch(new AuthActions.SignupStart(email, password))
     }
-
-    authObserv.subscribe(response => {
-      this.isLoading = false
-      this.router.navigate(['/recipes'])
-    }, errorMessage => {
-      this.error = errorMessage
-      this.showErrorAlert(errorMessage)
-      this.isLoading = false
-    })
     form.reset()
-  }
-
-  onHandleError() {
-    this.error = null
   }
 
   private showErrorAlert(message: string) {
@@ -81,6 +71,7 @@ export class AuthComponent implements OnInit, OnDestroy {
     this.closeSub = alertRef.instance.close.subscribe(() => {
       this.closeSub.unsubscribe()
       ref.clear()
+      this.store.dispatch(new AuthActions.ClearError())
     })
   }
 }
