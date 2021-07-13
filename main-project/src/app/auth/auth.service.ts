@@ -1,10 +1,13 @@
 import {Injectable} from "@angular/core";
 import {HttpClient, HttpErrorResponse} from "@angular/common/http";
 import {catchError, tap} from "rxjs/operators";
-import {BehaviorSubject, Observable, throwError} from "rxjs";
+import {Observable, throwError} from "rxjs";
 import {User} from "./user.model";
 import {Router} from "@angular/router";
 import {environment} from "../../environments/environment";
+import {Store} from "@ngrx/store";
+import {AppState} from "../store/app.reducer";
+import * as AuthActions from "../auth/store/auth.actions"
 
 export interface AuthResponseData {
   idToken: string
@@ -18,11 +21,11 @@ export interface AuthResponseData {
 @Injectable({providedIn: 'root'})
 export class AuthService {
 
-  user = new BehaviorSubject<User>(null)
-  private logoutTimer: any
+  private logoutTimer: number
 
   constructor(private client: HttpClient,
-              private router: Router) {}
+              private router: Router,
+              private store: Store<AppState>) {}
 
   signUp(email: string, password: string): Observable<AuthResponseData> {
     return this.client
@@ -32,21 +35,8 @@ export class AuthService {
         password,
         returnSecureToken: true
       })
-      .pipe(catchError(this.handleError), tap(response => {
-        this.user.next(this.createUser(response))
-      }))
-  }
-
-  login(email: string, password: string): Observable<AuthResponseData> {
-    return this.client
-      .post<AuthResponseData>(
-        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + environment.firebaseApiKey, {
-          email,
-          password,
-          returnSecureToken: true
-        })
-      .pipe(catchError(this.handleError), tap(response => {
-        this.user.next(this.createUser(response))
+      .pipe(catchError(handleError), tap(response => {
+        this.createUser(response)
       }))
   }
 
@@ -62,23 +52,28 @@ export class AuthService {
     }
     const loadedUser = new User(userData.email, userData.id, userData._token, new Date(userData._tokenExpirationDate))
     if (loadedUser.token) {
-      this.user.next(loadedUser)
+      this.store.dispatch(new AuthActions.LoginAction(
+        userData.email,
+        userData.id,
+        userData._token,
+        new Date(userData._tokenExpirationDate)
+      ))
       const duration = new Date(userData._tokenExpirationDate).getTime() - new Date().getTime()
       this.autoLogout(duration)
     }
   }
 
   logout() {
-    this.user.next(null)
+    this.store.dispatch(new AuthActions.LogoutAction())
     localStorage.removeItem('userData')
     this.router.navigate(['/auth'])
     if (this.logoutTimer) {
-      this.logoutTimer.clear()
+      clearTimeout(this.logoutTimer)
     }
     this.logoutTimer = null
   }
 
-  autoLogout(expirationDuration: number) {
+  private autoLogout(expirationDuration: number) {
     this.logoutTimer = setTimeout(() => {
       this.logout()
     }, expirationDuration)
@@ -90,26 +85,30 @@ export class AuthService {
     const expirationDate = new Date(timeOffset)
     const userData = new User(responseData.email, responseData.localId, responseData.idToken, expirationDate)
     localStorage.setItem('userData', JSON.stringify(userData))
-    this.autoLogout(timeOffset)
-    return userData
+    this.autoLogout(+responseData.expiresIn * 1000)
+    this.store.dispatch(new AuthActions.LoginAction(
+      responseData.email,
+      responseData.localId,
+      responseData.idToken,
+      new Date(expirationDate)
+    ))
   }
+}
 
-  private handleError(errorResponse: HttpErrorResponse) {
-      let errorMessage = 'An unknown error occurred'
-      if (!errorResponse.error || !errorResponse.error.error) {
-        return throwError(errorResponse)
-      }
-      switch (errorResponse.error.error.message) {
-        case 'EMAIL_EXISTS':
-          errorMessage = 'This email already exists'
-          break
-        case 'EMAIL_NOT_FOUND':
-          errorMessage = 'This email does not exist'
-          break
-        case 'INVALID_PASSWORD':
-          errorMessage = 'This password is not correct'
-      }
-      return throwError(errorMessage)
+function handleError(errorResponse: HttpErrorResponse) {
+  let errorMessage = 'An unknown error occurred'
+  if (!errorResponse.error || !errorResponse.error.error) {
+    return throwError(errorResponse)
   }
-
+  switch (errorResponse.error.error.message) {
+    case 'EMAIL_EXISTS':
+      errorMessage = 'This email already exists'
+      break
+    case 'EMAIL_NOT_FOUND':
+      errorMessage = 'This email does not exist'
+      break
+    case 'INVALID_PASSWORD':
+      errorMessage = 'This password is not correct'
+  }
+  return throwError(errorMessage)
 }
