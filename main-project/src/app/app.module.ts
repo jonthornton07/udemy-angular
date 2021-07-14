@@ -15,6 +15,7 @@ import {StoreDevtoolsModule} from "@ngrx/store-devtools";
 import {environment} from "../environments/environment";
 import {StoreRouterConnectingModule} from "@ngrx/router-store";
 import {RecipesEffects} from "./recipes/store/recipes.effects";
+import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
 
 @NgModule({
   declarations: [
@@ -23,6 +24,7 @@ import {RecipesEffects} from "./recipes/store/recipes.effects";
   ],
   imports: [
     AppRoutingModule,
+    BrowserAnimationsModule,
     BrowserModule.withServerTransition({ appId: 'serverApp' }),
     CoreModule,
     HttpClientModule,
